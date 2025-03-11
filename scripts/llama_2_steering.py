@@ -36,7 +36,7 @@ from accelerate import Accelerator
 # functionality.
 # NOTE: Don't commit HF tokens!
 ACCESS_TOKEN: str = ""
-MODEL_DIR: str = "meta-llama/Llama-2-70b-hf"
+MODEL_DIR: str = "/home/yejeon/models/meta-llama/Llama-2-7b-chat-hf"
 NUM_RETURN_SEQUENCES: int = 5
 MAX_NEW_TOKENS: int = 100
 SEED: int = 0
@@ -128,9 +128,11 @@ base_tokens: t.Tensor = model.generate(
         eos_token_id=tokenizer.eos_token_id,
         num_return_sequences=NUM_RETURN_SEQUENCES,
     ),
-)
+) # type: ignore
 
 base_strings: list[str] = [tokenizer.decode(x) for x in base_tokens]
+
+import pdb;pdb.set_trace()
 
 
 # %%
@@ -179,6 +181,7 @@ def residual_stream(mod: PreTrainedModel, layers: Optional[list[int]] = None):
 
 def get_pre_residual(prompt: str, layer_num: int, pad_length: int) -> t.Tensor:
     """Get residual stream activations for a prompt, just before a layer."""
+    import pdb;pdb.set_trace()
     with residual_stream(model, layers=[layer_num]) as unmodified_streams:
         model(**tokenize(prompt, pad_length=pad_length))
     return unmodified_streams[layer_num]
@@ -193,7 +196,8 @@ def temporary_padding_token(mod_tokenizer, padding_with):
     original_padding_token = mod_tokenizer.pad_token
 
     # Change padding token state.
-    mod_tokenizer.pad_token = padding_with
+    # mod_tokenizer.pad_token = padding_with
+    mod_tokenizer.pad_token = PADDING_STR
 
     # Context manager boilerplate.
     try:
@@ -218,6 +222,7 @@ component_span: int = get_max_length(PLUS_PROMPT, MINUS_PROMPT)
 
 # Generate the steering vector.
 with temporary_padding_token(tokenizer, padding_id):
+    import pdb;pdb.set_trace()
     plus_activation = get_pre_residual(PLUS_PROMPT, ACT_NUM, component_span)
     minus_activation = get_pre_residual(MINUS_PROMPT, ACT_NUM, component_span)
     assert plus_activation.shape == minus_activation.shape
@@ -241,15 +246,15 @@ def _steering_hook(_, inpt):
 
 addition_layer = get_blocks(model)[ACT_NUM]
 with pre_hooks(hooks=[(addition_layer, _steering_hook)]):
-    steered_tokens: t.Tensor = model.generate(
-        tokenize(CHAT_PROMPT).input_ids,
-        generation_config=GenerationConfig(
-            **sampling_kwargs,
-            do_sample=DO_SAMPLE,
-            max_new_tokens=MAX_NEW_TOKENS,
-            eos_token_id=tokenizer.eos_token_id,
-            num_return_sequences=NUM_RETURN_SEQUENCES,
-        ),
+    steered_tokens: t.Tensor = model.generate( 
+        tokenize(CHAT_PROMPT).input_ids, 
+        generation_config=GenerationConfig( 
+            **sampling_kwargs, 
+            do_sample=DO_SAMPLE, 
+            max_new_tokens=MAX_NEW_TOKENS, 
+            eos_token_id=tokenizer.eos_token_id, 
+            num_return_sequences=NUM_RETURN_SEQUENCES, 
+        ), 
     )
 
 steered_strings: list[str] = [tokenizer.decode(z) for z in steered_tokens]

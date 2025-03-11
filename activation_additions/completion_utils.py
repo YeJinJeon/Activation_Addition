@@ -86,8 +86,9 @@ def gen_using_model(
     tokenized_prompts: Int[t.Tensor, "batch pos"] = model.to_tokens(
         prompt_batch
     )
-    completions: Float[t.Tensor, "batch pos"] = model.generate(
-        input=tokenized_prompts,
+    # import pdb;pdb.set_trace()
+    completions: Float[t.Tensor, "batch pos"] = model.generate( 
+        input=tokenized_prompts, 
         max_new_tokens=tokens_to_generate,
         verbose=False,
         **sampling_kwargs,
@@ -178,12 +179,13 @@ def gen_using_hooks(
     """
     # Feels a bit strong to deprecate this, but using gen_using_model is more flexible.
     # warnings.warn("Deprecated: Use `gen_using_model` and `with model.hooks(...)` instead")
-
+    
     fwd_hooks = [
         (name, hook_fn)
         for name, hook_fns in hook_fns.items()
         for hook_fn in hook_fns
     ]
+    # import pdb;pdb.set_trace()
     with model.hooks(fwd_hooks=fwd_hooks):  # type: ignore
         results = gen_using_model(
             model,
@@ -246,7 +248,6 @@ def gen_using_activation_additions(
             res_stream_slice=res_stream_slice,
         )
     )
-
     return gen_using_hooks(model=model, hook_fns=hook_fns, log=False, **kwargs)
 
 
@@ -361,8 +362,7 @@ def print_n_comparisons(
     activation_additions: Optional[List[ActivationAddition]] = None,
     addition_location: str = "front",
     res_stream_slice: slice = slice(None),
-    **kwargs,
-) -> None:
+    **kwargs,):
     """Pretty-print generations from `model` using the appropriate hook
     functions.
 
@@ -400,7 +400,8 @@ def print_n_comparisons(
         prompt_batch=prompt_batch, model=model, hook_fns={}, **kwargs
     )
     data_frames: List[pd.DataFrame] = [normal_df]
-
+    import pdb;pdb.set_trace()
+    print("Finished normal generation without hooks!")
     # Generate the completions from the modified model
     if activation_additions is not None:
         mod_df: pd.DataFrame = gen_using_activation_additions(
@@ -415,5 +416,6 @@ def print_n_comparisons(
 
     # Combine the completion results, ensuring that the indices are unique
     results: pd.DataFrame = pd.concat(data_frames, ignore_index=True)
+    # pretty_print_completions(results=results)
 
-    pretty_print_completions(results=results)
+    return results
