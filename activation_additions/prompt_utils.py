@@ -25,6 +25,7 @@ class ActivationAddition:
 
     coeff: float
     act_name: str
+    act_loc: Int
     prompt: str
     tokens: Int[torch.Tensor, "seq"]
 
@@ -32,6 +33,7 @@ class ActivationAddition:
         self,
         coeff: float,
         act_name: Union[str, int],
+        act_loc: Optional[int]=None,
         prompt: Optional[str] = None,
         tokens: Optional[Int[torch.Tensor, "seq"]] = None,
     ):
@@ -54,12 +56,11 @@ class ActivationAddition:
         ), "Must specify either prompt or tokens, but not both."
 
         self.coeff = coeff
-
         # Set the activation name
         if isinstance(act_name, int):
             self.act_name = get_block_name(block_num=act_name)
         else:
-            self.act_name = act_name
+            self.act_name = get_act_name(name=act_name, layer=act_loc)
 
         # Set the tokens
         if tokens is not None:
@@ -101,6 +102,7 @@ def get_x_vector(
     prompt2: str,
     coeff: float,
     act_name: Union[int, str],
+    act_loc: int,
     model: Optional[HookedTransformer] = None,
     pad_method: Optional[str] = None,
     custom_pad_id: Optional[int] = None,
@@ -130,7 +132,7 @@ def get_x_vector(
     """
     if pad_method == "tokens_left":
         raise NotImplementedError("tokens_left not implemented yet.")
-
+    
     if pad_method is not None:
         assert pad_method in [
             "tokens_right",
@@ -166,18 +168,18 @@ def get_x_vector(
         padded_tokens1, padded_tokens2 = map(pad_partial, [tokens1, tokens2])
 
         end_point = ActivationAddition(
-            tokens=padded_tokens1, coeff=coeff, act_name=act_name
+            tokens=padded_tokens1, coeff=coeff, act_name=act_name, act_loc=act_loc,
         )
         start_point = ActivationAddition(
-            tokens=padded_tokens2, coeff=-1 * coeff, act_name=act_name
+            tokens=padded_tokens2, coeff=-1 * coeff, act_name=act_name, act_loc=act_loc,
         )
         return end_point, start_point
 
     end_point = ActivationAddition(
-        prompt=prompt1, coeff=coeff, act_name=act_name
+        prompt=prompt1, coeff=coeff, act_name=act_name, act_loc=act_loc,
     )
     start_point = ActivationAddition(
-        prompt=prompt2, coeff=-1 * coeff, act_name=act_name
+        prompt=prompt2, coeff=-1 * coeff, act_name=act_name, act_loc=act_loc,
     )
     return end_point, start_point
 
