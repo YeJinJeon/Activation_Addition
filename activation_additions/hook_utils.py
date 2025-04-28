@@ -15,7 +15,6 @@ from activation_additions.prompt_utils import (
     get_block_name,
 )
 
-
 def apply_activation_additions(
     model: HookedTransformer,
     activation_additions: List[ActivationAddition],
@@ -49,34 +48,11 @@ def get_prompt_activations(  # TODO rename
         tokens = model.to_tokens(activation_addition.prompt)
 
     # Run the forward pass
-    # ActivationCache is basically Dict[str, torch.Tensor]
+    # ActivationCache is basically Dict[str, torch.Tensor]]
     cache: ActivationCache = model.run_with_cache(
         tokens,
         names_filter=lambda act_name: act_name == activation_addition.act_name,
     )[1]
-
-    import pdb;pdb.set_trace()
-    from prettytable import PrettyTable
-    print(tokens)
-    tmp_cache = model.run_with_cache(tokens)
-    table = PrettyTable()
-    table.field_names = ["block_name", "min_value", "max_value"]
-    target_block_names = ["hook_resid_pre", "mlp.hook_post", "mlp.hook_mlp_out", "mlp"]
-    layer_names = tmp_cache[1].keys()
-    target_layer_names = []
-    for layer in layer_names:
-        for target in target_block_names :
-            if target in layer:
-                target_layer_names.append(layer)
-                break
-    for layer in target_layer_names:
-        act_tensor = tmp_cache[1][layer]
-        act_min = round(torch.min(act_tensor).item(),2)
-        act_max = round(torch.max(act_tensor).item(),2)
-        table.add_row([layer, act_min, act_max])
-    print(table)
-
-    
     # Return cached activations times coefficient
     return activation_addition.coeff * cache[activation_addition.act_name]
 
@@ -91,7 +67,7 @@ def get_activation_dict(
     activation_dict: Dict[
         str, List[Float[torch.Tensor, "batch pos d_model"]]
     ] = defaultdict(list)
-
+  
     # Add activations for each prompt
     for activation_addition in activation_additions:
         activation_dict[activation_addition.act_name].append(
@@ -244,7 +220,6 @@ def hook_fn_from_activations(
         resid_pre (shape [batch, seq, hidden_dim]), then raises an
         error.
         """
-        #import pdb;pdb.set_trace()
         prompt_seq_len: int = resid_pre.shape[1]
         
         # Check if prompt_activ_len > sequence length for this batch
@@ -283,26 +258,11 @@ def hook_fn_from_activations(
             sequence_slice,  # Only add to first/middle/last residual streams
             res_stream_slice,
         )
-
-        import pdb;pdb.set_trace()
-        from prettytable import PrettyTable
-        table = PrettyTable()
-        table.field_names = ["activation", "min_value", "max_value"]
-        act_min = torch.min(resid_pre).item()
-        act_max = torch.max(resid_pre).item()
-        table.add_row(["block.6.hook_resid_pre", act_min, act_max])
-
         # NOTE if caching old QKV results, this hook does nothing when
         # the context window sta rts rolling over
         resid_pre[indexing_operation] = (
             activations[:, :, res_stream_slice] + resid_pre[indexing_operation]
         )
-
-        act_min = torch.min(resid_pre).item()
-        act_max = torch.max(resid_pre).item()
-        table.add_row(["Updated", act_min, act_max])
-        print(table)
-
         return resid_pre
 
     return prompt_hook
@@ -323,7 +283,6 @@ def hook_fns_from_act_dict(
     """
     # Make the dictionary
     hook_fns: Dict[str, List[Callable]] = {}
-
     # Add hook functions for each activation name
     for act_name, act_list in activation_dict.items():
         # Compose the hook functions for each prompt
@@ -332,7 +291,6 @@ def hook_fns_from_act_dict(
             for activations in act_list
         ]
         hook_fns[act_name] = act_fns
-
     return hook_fns
 
 

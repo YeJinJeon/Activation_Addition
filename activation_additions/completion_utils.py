@@ -86,7 +86,6 @@ def gen_using_model(
     tokenized_prompts: Int[t.Tensor, "batch pos"] = model.to_tokens(
         prompt_batch
     )
-    # import pdb;pdb.set_trace()
     completions: Float[t.Tensor, "batch pos"] = model.generate( 
         input=tokenized_prompts, 
         max_new_tokens=tokens_to_generate,
@@ -185,7 +184,6 @@ def gen_using_hooks(
         for name, hook_fns in hook_fns.items()
         for hook_fn in hook_fns
     ]
-    # import pdb;pdb.set_trace()
     with model.hooks(fwd_hooks=fwd_hooks):  # type: ignore
         results = gen_using_model(
             model,
@@ -400,7 +398,6 @@ def print_n_comparisons(
         prompt_batch=prompt_batch, model=model, hook_fns={}, **kwargs
     )
     data_frames: List[pd.DataFrame] = [normal_df]
-    import pdb;pdb.set_trace()
     print("Finished normal generation without hooks!")
     # Generate the completions from the modified model
     if activation_additions is not None:
